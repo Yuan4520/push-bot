@@ -16,6 +16,8 @@ jobs:
 
     env:
       SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
+      BOT_CONFIG_B64: ${{ secrets.BOT_CONFIG_B64 }}
+      JIPIAO_CONFIG_B64: ${{ secrets.JIPIAO_CONFIG_B64 }}
       PYTHONUTF8: "1"
 
     steps:
@@ -27,6 +29,12 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Check required secrets
+        run: |
+          test -n "$SERVERCHAN_SENDKEY" || (echo "Missing SERVERCHAN_SENDKEY secret" && exit 1)
+          test -n "$BOT_CONFIG_B64" || (echo "Missing BOT_CONFIG_B64 secret" && exit 1)
+          test -n "$JIPIAO_CONFIG_B64" || (echo "Missing JIPIAO_CONFIG_B64 secret" && exit 1)
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -35,8 +43,8 @@ jobs:
 
       - name: Write private configs
         run: |
-          printf '%s' "${{ secrets.BOT_CONFIG_B64 }}" | base64 --decode > config.json
-          printf '%s' "${{ secrets.JIPIAO_CONFIG_B64 }}" | base64 --decode > references/JiPiao-master/config.yaml
+          printf '%s' "$BOT_CONFIG_B64" | base64 --decode > config.json
+          printf '%s' "$JIPIAO_CONFIG_B64" | base64 --decode > references/JiPiao-master/config.yaml
 
       - name: Fetch flight prices
         working-directory: references/JiPiao-master
