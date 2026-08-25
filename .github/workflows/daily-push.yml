@@ -33,6 +33,11 @@ jobs:
           python -m pip install -r requirements.txt
           python -m pip install -r references/JiPiao-master/requirements.txt
 
+      - name: Write private configs
+        run: |
+          printf '%s' "${{ secrets.BOT_CONFIG_B64 }}" | base64 --decode > config.json
+          printf '%s' "${{ secrets.JIPIAO_CONFIG_B64 }}" | base64 --decode > references/JiPiao-master/config.yaml
+
       - name: Fetch flight prices
         working-directory: references/JiPiao-master
         run: python main.py --once
