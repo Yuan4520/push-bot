@@ -42,7 +42,7 @@ PUSHPLUS_TOKEN=你的PushPlus Token
 
 默认包含：
 
-- 武汉天气
+- 多地点天气
 - 几个新闻 RSS
 - 机票关注说明
 
@@ -81,6 +81,8 @@ cd "C:\Users\YTY\Documents\ChatGPT\推送机器人"
 
 ```text
 SERVERCHAN_SENDKEY=你的Server酱SendKey
+BOT_CONFIG_B64=你的config.json经过base64后的内容
+JIPIAO_CONFIG_B64=你的references/JiPiao-master/config.yaml经过base64后的内容
 ```
 
 路径：
@@ -90,6 +92,13 @@ GitHub 仓库 -> Settings -> Secrets and variables -> Actions -> New repository 
 ```
 
 工作流默认每天北京时间 08:10、14:10、20:10 运行，也可以在 GitHub 的 Actions 页面手动点 `Run workflow`。
+
+Windows PowerShell 生成 base64：
+
+```powershell
+[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes((Get-Content config.json -Raw)))
+[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes((Get-Content references\JiPiao-master\config.yaml -Raw)))
+```
 
 ## 4. 手动运行一次
 
