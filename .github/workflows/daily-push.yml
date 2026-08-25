@@ -1,0 +1,41 @@
+name: Daily WeChat Push
+
+on:
+  workflow_dispatch:
+  schedule:
+    # GitHub Actions cron uses UTC.
+    # 00:10/06:10/12:10 UTC = 08:10/14:10/20:10 Asia/Shanghai.
+    - cron: "10 0 * * *"
+    - cron: "10 6 * * *"
+    - cron: "10 12 * * *"
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    env:
+      SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
+      PYTHONUTF8: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install -r references/JiPiao-master/requirements.txt
+
+      - name: Fetch flight prices
+        working-directory: references/JiPiao-master
+        run: python main.py --once
+
+      - name: Send daily brief
+        run: python push_bot.py --config config.json

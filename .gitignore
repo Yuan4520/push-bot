@@ -1,0 +1,12 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+data/
+references/*.zip
+references/JiPiao-master/.venv/
+references/JiPiao-master/data/
+references/JiPiao-master/logs/
+references/JiPiao-master/debug/
+references/JiPiao-master/user_data/
+references/ticket-price-sentinel-main/

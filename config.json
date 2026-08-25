@@ -1,0 +1,108 @@
+{
+  "title": "今日个人简报",
+  "weather": {
+    "enabled": true,
+    "cities": [
+      {
+        "name": "深圳市坪山区",
+        "query": "Pingshan,Shenzhen"
+      },
+      {
+        "name": "广州市越秀区",
+        "query": "Yuexiu,Guangzhou"
+      }
+    ]
+  },
+  "news": {
+    "enabled": true,
+    "daily_60s_enabled": true,
+    "max_items": 8,
+    "keywords": [],
+    "feeds": [
+      "https://www.thepaper.cn/rss_news.jsp",
+      "https://www.zaobao.com.sg/realtime/rss.xml",
+      "https://rsshub.app/36kr/newsflashes"
+    ]
+  },
+  "flights": {
+    "enabled": true,
+    "direct_only": true,
+    "exclude_arrive_dates": [
+      "2026-10-02"
+    ],
+    "routes": [
+      {
+        "from": "广州",
+        "to": "兰州",
+        "date": "2026-09-30",
+        "target_price": 1100
+      },
+      {
+        "from": "广州",
+        "to": "西宁",
+        "date": "2026-09-30",
+        "target_price": 1300
+      },
+      {
+        "from": "深圳",
+        "to": "兰州",
+        "date": "2026-09-30",
+        "target_price": 1100
+      },
+      {
+        "from": "深圳",
+        "to": "西宁",
+        "date": "2026-09-30",
+        "target_price": 1300
+      },
+      {
+        "from": "珠海",
+        "to": "兰州",
+        "date": "2026-09-30",
+        "target_price": 1100
+      },
+      {
+        "from": "珠海",
+        "to": "西宁",
+        "date": "2026-09-30",
+        "target_price": 1300
+      },
+      {
+        "from": "广州",
+        "to": "兰州",
+        "date": "2026-10-01",
+        "target_price": 1100
+      },
+      {
+        "from": "广州",
+        "to": "西宁",
+        "date": "2026-10-01",
+        "target_price": 1300
+      },
+      {
+        "from": "深圳",
+        "to": "兰州",
+        "date": "2026-10-01",
+        "target_price": 1100
+      },
+      {
+        "from": "深圳",
+        "to": "西宁",
+        "date": "2026-10-01",
+        "target_price": 1300
+      },
+      {
+        "from": "珠海",
+        "to": "兰州",
+        "date": "2026-10-01",
+        "target_price": 1100
+      },
+      {
+        "from": "珠海",
+        "to": "西宁",
+        "date": "2026-10-01",
+        "target_price": 1300
+      }
+    ]
+  }
+}
