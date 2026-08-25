@@ -28,80 +28,14 @@
     "enabled": true,
     "direct_only": true,
     "exclude_arrive_dates": [
-      "2026-10-02"
+      "YYYY-MM-DD"
     ],
     "routes": [
       {
-        "from": "广州",
-        "to": "兰州",
-        "date": "2026-09-30",
-        "target_price": 1100
-      },
-      {
-        "from": "广州",
-        "to": "西宁",
-        "date": "2026-09-30",
-        "target_price": 1300
-      },
-      {
-        "from": "深圳",
-        "to": "兰州",
-        "date": "2026-09-30",
-        "target_price": 1100
-      },
-      {
-        "from": "深圳",
-        "to": "西宁",
-        "date": "2026-09-30",
-        "target_price": 1300
-      },
-      {
-        "from": "珠海",
-        "to": "兰州",
-        "date": "2026-09-30",
-        "target_price": 1100
-      },
-      {
-        "from": "珠海",
-        "to": "西宁",
-        "date": "2026-09-30",
-        "target_price": 1300
-      },
-      {
-        "from": "广州",
-        "to": "兰州",
-        "date": "2026-10-01",
-        "target_price": 1100
-      },
-      {
-        "from": "广州",
-        "to": "西宁",
-        "date": "2026-10-01",
-        "target_price": 1300
-      },
-      {
-        "from": "深圳",
-        "to": "兰州",
-        "date": "2026-10-01",
-        "target_price": 1100
-      },
-      {
-        "from": "深圳",
-        "to": "西宁",
-        "date": "2026-10-01",
-        "target_price": 1300
-      },
-      {
-        "from": "珠海",
-        "to": "兰州",
-        "date": "2026-10-01",
-        "target_price": 1100
-      },
-      {
-        "from": "珠海",
-        "to": "西宁",
-        "date": "2026-10-01",
-        "target_price": 1300
+        "from": "出发城市",
+        "to": "到达城市",
+        "date": "YYYY-MM-DD",
+        "target_price": 1000
       }
     ]
   }
