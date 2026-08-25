@@ -28,14 +28,14 @@
     "enabled": true,
     "direct_only": true,
     "exclude_arrive_dates": [
-      "2026-10-02"
+      "YYYY-MM-DD"
     ],
     "routes": [
       {
-        "from": "武汉",
-        "to": "家",
-        "date": "待填写",
-        "target_price": 500
+        "from": "出发城市",
+        "to": "到达城市",
+        "date": "YYYY-MM-DD",
+        "target_price": 1000
       }
     ]
   }
