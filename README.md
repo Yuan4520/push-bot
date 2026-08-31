@@ -1,141 +1,370 @@
-# 微信个人推送机器人
+# 微信自定义推送机器人
 
-最低成本方案：本地 Python 定时脚本 + 免费微信推送服务。
+这是一个低成本的个人微信推送方案：用 Python 拉取天气、新闻和机票价格，再通过 Server 酱推送到微信；用 GitHub Actions 定时运行，这样电脑不用一直开机。
 
-推荐先用 Server酱：
+适合这些需求：
 
-- 成本：低频个人使用通常可以免费
-- 难度：最低，只需要一个 `SENDKEY`
-- 适合：每天早上推送天气、新闻摘要、机票关注提醒
+- 每天固定时间收到天气和新闻简报。
+- 高频监测某段日期的机票价格。
+- 只有命中低价条件时才发微信提醒。
+- 同一趟航班避免重复提醒，只有再次降价才重新提醒。
 
-如果以后推送频率更高，可以改用 PushPlus，只需要换环境变量。
+## 技术方案
 
-## 1. 安装依赖
+整体分成两条链路：
+
+1. 普通简报链路
+   - 配置文件：`config.json`
+   - 程序入口：`push_bot.py`
+   - 云端定时：`.github/workflows/daily-push.yml`
+   - 当前默认：每天北京时间 10:00 推送天气和新闻。
+
+2. 机票监控链路
+   - 配置文件：`references/JiPiao-master/config.yaml`
+   - 程序入口：`references/JiPiao-master/main.py --once`
+   - 云端定时：`.github/workflows/flight-monitor.yml`
+   - 当前默认：约每 30 分钟查一次票价，只有命中低价才推送。
+
+推送渠道默认使用 Server 酱。Server 酱的好处是接入简单，只需要一个 `SERVERCHAN_SENDKEY`，个人低频使用成本最低。
+
+## 当前示例规则
+
+当前机票监控规则是：
+
+- 航线：西宁 `XNN` -> 深圳 `SZX`
+- 日期：`2026-09-20` 到 `2026-09-30`
+- 价格：低于或等于 `600` 元才通知
+- 限制：出发和到达必须是同一天
+- 去重：同一天同一趟航班只通知一次，除非之后查到更低价格
+
+## 准备工作
+
+需要：
+
+- 一个 GitHub 账号
+- 一个 Server 酱账号
+- Python 3.12 或较新版本
+- 一个 GitHub 仓库
+
+Server 酱地址：
+
+https://sct.ftqq.com/
+
+登录 Server 酱后，绑定微信，复制自己的 `SendKey`。
+
+## 本地安装
+
+进入项目目录：
+
+```powershell
+cd "C:\Users\YTY\Documents\ChatGPT\推送机器人"
+```
+
+安装普通简报依赖：
 
 ```powershell
 python -m pip install -r requirements.txt
 ```
 
-## 2. 配置
-
-复制配置模板：
+安装机票监控依赖：
 
 ```powershell
-Copy-Item .env.example .env
+python -m pip install -r references\JiPiao-master\requirements.txt
 ```
 
-打开 `.env`，至少填写其中一种推送方式：
+## 配置普通简报
+
+普通简报配置在 `config.json`。
+
+示例：
+
+```json
+{
+  "title": "今日个人简报",
+  "brief_only": true,
+  "weather": {
+    "enabled": true,
+    "cities": [
+      {
+        "name": "深圳市坪山区",
+        "query": "Pingshan,Shenzhen"
+      },
+      {
+        "name": "广州市越秀区",
+        "query": "Yuexiu,Guangzhou"
+      }
+    ]
+  },
+  "news": {
+    "enabled": true,
+    "daily_60s_enabled": true,
+    "max_items": 8,
+    "keywords": [],
+    "feeds": [
+      "https://www.thepaper.cn/rss_news.jsp",
+      "https://www.zaobao.com.sg/realtime/rss.xml",
+      "https://rsshub.app/36kr/newsflashes"
+    ]
+  },
+  "flights": {
+    "enabled": false
+  }
+}
+```
+
+常用修改：
+
+- 改标题：修改 `title`
+- 改天气地点：修改 `weather.cities`
+- 只看关键词新闻：在 `news.keywords` 里填关键词
+- 每天简报不带机票：保持 `brief_only: true` 和 `flights.enabled: false`
+
+本地测试普通简报：
+
+```powershell
+.\.venv\Scripts\python.exe push_bot.py --config config.json --dry-run
+```
+
+真正推送：
+
+```powershell
+$env:SERVERCHAN_SENDKEY="你的Server酱SendKey"
+.\.venv\Scripts\python.exe push_bot.py --config config.json
+```
+
+## 配置机票监控
+
+机票配置在：
 
 ```text
-SERVERCHAN_SENDKEY=你的Server酱SendKey
+references/JiPiao-master/config.yaml
 ```
 
-或：
+示例：
 
-```text
-PUSHPLUS_TOKEN=你的PushPlus Token
+```yaml
+routes:
+  - from: XNN
+    from_name: 西宁
+    to: SZX
+    to_name: 深圳
+    dates:
+      - "2026-09-20"
+      - "2026-09-21"
+      - "2026-09-22"
+      - "2026-09-23"
+      - "2026-09-24"
+      - "2026-09-25"
+      - "2026-09-26"
+      - "2026-09-27"
+      - "2026-09-28"
+      - "2026-09-29"
+      - "2026-09-30"
+    alert_threshold: 600
+
+platforms:
+  - fliggy
+
+crawler:
+  direct_only: true
+  timeout_seconds: 45
+  delay_min: 5
+  delay_max: 15
+
+output:
+  db_path: data/prices.db
+  log_path: logs/monitor.log
+
+notifier:
+  push_drop_min: 1
+  push_rise_min: 50
+  serverchan:
+    enabled: true
+    send_key: ""
+    channel: ""
 ```
 
-## 3. 修改订阅内容
+字段说明：
 
-编辑 `config.example.json`，保存为 `config.json`。
+- `from` / `to`：机场三字码，例如西宁 `XNN`、深圳 `SZX`、广州 `CAN`
+- `dates`：要监控的出发日期
+- `alert_threshold`：低于或等于这个价格才通知
+- `platforms`：当前推荐 `fliggy`
+- `direct_only`：尽量只看直飞或非中转结果
+- `push_drop_min: 1`：同一航班再次降价 1 元及以上才再次提醒
 
-默认包含：
-
-- 多地点天气
-- 几个新闻 RSS
-- 机票关注说明
-
-当前版本还会自动读取 `references/JiPiao-master/data/prices.db`，把 JiPiao 抓到的飞猪机票价格融入每日简报。
-
-## 机票监控
-
-已经接入 `yangka1212/JiPiao` 的飞猪查价结果。
-
-手动跑一次查价：
+本地测试机票监控：
 
 ```powershell
 cd "C:\Users\YTY\Documents\ChatGPT\推送机器人\references\JiPiao-master"
-..\ticket-price-sentinel-main\.venv\Scripts\python.exe main.py --once
+$env:SERVERCHAN_SENDKEY="你的Server酱SendKey"
+..\..\.venv\Scripts\python.exe main.py --once
 ```
 
-后台启动飞猪定时监控：
+如果没有低于阈值的机票，本地运行成功也不会发微信，这是正常的。
 
-```powershell
-cd "C:\Users\YTY\Documents\ChatGPT\推送机器人"
-.\start_jipiao_fliggy.ps1
-```
+## 去重逻辑
 
-每日简报会展示：
-
-- 低价命中
-- 最值得盯的航线
-- 接近目标价的航线
-- 暂无价格的航线
-
-## GitHub Actions 云端定时
-
-如果不想让笔记本一直开机，可以把这个目录推到 GitHub 仓库，并启用 `.github/workflows/daily-push.yml`。
-
-需要在仓库设置里添加 Secret：
+机票通知状态存在 sqlite 数据库：
 
 ```text
-SERVERCHAN_SENDKEY=你的Server酱SendKey
-BOT_CONFIG_B64=你的config.json经过base64后的内容
-JIPIAO_CONFIG_B64=你的references/JiPiao-master/config.yaml经过base64后的内容
+references/JiPiao-master/data/prices.db
 ```
 
-路径：
+程序会按这些信息识别“同一趟航班”：
+
+- 出发城市
+- 到达城市
+- 出发日期
+- 航司
+- 航班号
+- 出发时间
+- 到达时间
+
+同一个航班第一次低于阈值会通知。之后如果价格没有更低，就跳过；如果又降价，就再次通知。
+
+GitHub Actions 每次运行都是新机器，所以 `flight-monitor.yml` 使用 `actions/cache` 保存 `data` 目录，让去重状态能跨运行保留。
+
+## 上传到 GitHub
+
+把项目推到自己的 GitHub 仓库。仓库可以公开，但不要把真实 `config.yaml`、`.env`、数据库、日志提交上去。
+
+推荐 `.gitignore` 排除：
+
+```text
+.env
+.venv/
+data/
+references/JiPiao-master/data/
+references/JiPiao-master/logs/
+references/JiPiao-master/debug/
+references/JiPiao-master/user_data/
+```
+
+## 配置 GitHub Secrets
+
+打开：
 
 ```text
 GitHub 仓库 -> Settings -> Secrets and variables -> Actions -> New repository secret
 ```
 
-当前云端拆成两个工作流：
+添加三个 secret：
 
-- `Daily WeChat Push`：每天北京时间 10:00 推送普通天气和新闻简报。
-- `Flight Price Monitor`：约每 30 分钟监测一次机票。命中低价才通过 Server 酱推送。
-
-机票告警规则：
-
-- 当前关注 `2026-09-20` 到 `2026-09-30` 西宁飞深圳。
-- 价格低于 600 元才通知。
-- 出发和到达必须是同一天。
-- 同一天同一趟航班只通知一次，除非之后查到更低价格。
-
-GitHub Actions 页面手动点 `Run workflow` 会立即运行对应工作流；手动运行 `Daily WeChat Push` 会立刻发普通简报，手动运行 `Flight Price Monitor` 只有命中低价才发机票提醒。
+```text
+SERVERCHAN_SENDKEY=你的Server酱SendKey
+BOT_CONFIG_B64=config.json 的 base64
+JIPIAO_CONFIG_B64=references/JiPiao-master/config.yaml 的 base64
+```
 
 Windows PowerShell 生成 base64：
 
 ```powershell
+cd "C:\Users\YTY\Documents\ChatGPT\推送机器人"
+
 [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes((Get-Content config.json -Raw)))
 [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes((Get-Content references\JiPiao-master\config.yaml -Raw)))
 ```
 
-## 4. 手动运行一次
+第一个结果填进 `BOT_CONFIG_B64`，第二个结果填进 `JIPIAO_CONFIG_B64`。
 
-```powershell
-python push_bot.py --config config.json
+每次改了 `config.json` 或 `config.yaml`，都要重新生成并更新对应 secret，否则 GitHub Actions 仍会用旧配置。
+
+## GitHub Actions 定时
+
+普通简报：
+
+```yaml
+name: Daily WeChat Push
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 2 * * *"
 ```
 
-## 5. 设置每天自动运行
+GitHub cron 使用 UTC。`0 2 * * *` 表示 UTC 02:00，也就是北京时间 10:00。
 
-Windows 任务计划程序里新建任务：
+机票监控：
 
-- 程序：`python`
-- 参数：`push_bot.py --config config.json`
-- 起始于：本项目目录
+```yaml
+name: Flight Price Monitor
 
-例如每天早上 8:00 运行一次。
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/30 * * * *"
+```
 
-## 获取 Server酱 SendKey
+`*/30 * * * *` 表示大约每 30 分钟运行一次。GitHub Actions 定时可能会延迟几分钟，偶尔也可能漏触发一次。
 
-访问 Server酱官网，登录后绑定微信，复制 SendKey：
+## 手动运行
 
-https://sct.ftqq.com/
+进入 GitHub 仓库：
 
-## 获取 PushPlus Token
+```text
+Actions -> 选择 workflow -> Run workflow
+```
 
-访问 PushPlus 官网，登录后复制 Token：
+注意：
 
-https://www.pushplus.plus/
+- 手动运行 `Daily WeChat Push` 会立即发普通简报。
+- 手动运行 `Flight Price Monitor` 只会查机票，命中低价才发微信。
+- 如果 Actions 页面显示黄色圆圈，表示正在运行。
+- 绿色勾表示成功。
+- 红色叉表示失败，需要点进去看失败步骤。
+
+## 自定义示例
+
+改成广州飞北京，9 月 25 到 9 月 30，低于 700 提醒：
+
+```yaml
+routes:
+  - from: CAN
+    from_name: 广州
+    to: PEK
+    to_name: 北京
+    dates:
+      - "2026-09-25"
+      - "2026-09-26"
+      - "2026-09-27"
+      - "2026-09-28"
+      - "2026-09-29"
+      - "2026-09-30"
+    alert_threshold: 700
+```
+
+每天 8:30 发普通简报：
+
+```yaml
+schedule:
+  - cron: "30 0 * * *"
+```
+
+北京时间换 UTC 的方法：
+
+```text
+北京时间 - 8 小时 = GitHub cron 时间
+```
+
+## 常见问题
+
+为什么没到时间，手动 run 完也发了？
+
+因为 `workflow_dispatch` 是手动触发，点 `Run workflow` 会立刻运行，不受定时时间限制。
+
+为什么到点没收到？
+
+先看 Actions 有没有生成新 run。如果没有，通常是 GitHub 定时延迟、漏触发，或者配置提交时间晚于当天触发时间。如果有 run，再看它是绿色成功还是红色失败。
+
+为什么机票监控成功但没推送？
+
+这通常是正常的。只有满足价格阈值、同日到达、且没有重复通知时才会推送。
+
+为什么要用 base64 secret？
+
+因为配置文件里可能有私人行程、推送 key 等信息。放进 GitHub Secrets 比直接提交到公开仓库更安全。
+
+为什么不用电脑一直开机？
+
+因为 GitHub Actions 在云端定时跑脚本。只要仓库和 Secrets 配好，本地电脑关机也不影响推送。
