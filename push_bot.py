@@ -348,7 +348,7 @@ def build_message(config):
         sections.append(("新闻", get_news(news)))
 
     flights = config.get("flights", {})
-    if flights.get("enabled"):
+    if flights.get("enabled") and not config.get("brief_only", False):
         sections.append(("机票", get_flights_note(flights)))
 
     body = []

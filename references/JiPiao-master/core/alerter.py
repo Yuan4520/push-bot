@@ -11,7 +11,7 @@ class Alerter:
         """
         notifier:        推送器（None 表示不推送）
         storage:         用于读写 alert_state（去抖）
-        push_drop_min:   触发"再次推送"的最小降幅(¥)
+        push_drop_min:   同一航班触发"再次推送"的最小降幅(¥)
         push_rise_min:   触发"再次推送"的最小涨幅(¥)
         """
         self.logger = logger
@@ -66,20 +66,11 @@ class Alerter:
 
     # ---------- 阈值提醒 + 推送 ----------
     def _handle_threshold(self, route: Route, prices: List[FlightPrice]):
-        # 按日期取最低
-        best_by_date = {}
-        for p in prices:
-            cur = best_by_date.get(p.depart_date)
-            if cur is None or p.price < cur.price:
-                best_by_date[p.depart_date] = p
+        for bp in sorted(prices, key=lambda item: (item.depart_date, item.price)):
+            date = bp.depart_date
+            route_key = self._flight_key(route, bp)
 
-        for date, bp in sorted(best_by_date.items()):
-            route_key = f"{route.from_code}-{route.to_code}-{date}"
-
-            if bp.price > route.alert_threshold:
-                # 涨出阈值：清除去抖状态，下次跌破按"首次"重新推
-                if self.storage:
-                    self.storage.clear_alert_state(route_key)
+            if bp.price > route.alert_threshold or not self._arrives_same_day(bp):
                 continue
 
             last = self.storage.get_alert_state(route_key) if self.storage else None
@@ -109,6 +100,27 @@ class Alerter:
             return True, f"涨¥{diff:.0f}"
         return False, f"波动¥{diff:+.0f}(<阈值)"
 
+    def _flight_key(self, route: Route, p: FlightPrice) -> str:
+        airline = self._key_part(p.airline)
+        flight_no = self._key_part(p.flight_no)
+        depart_time = self._key_part(p.depart_time)
+        arrive_time = self._key_part(p.arrive_time)
+        return (
+            f"{route.from_code}-{route.to_code}-{p.depart_date}-"
+            f"{airline}-{flight_no}-{depart_time}-{arrive_time}"
+        )
+
+    @staticmethod
+    def _key_part(value: str) -> str:
+        return str(value or "").strip().replace(" ", "_") or "-"
+
+    @staticmethod
+    def _arrives_same_day(p: FlightPrice) -> bool:
+        arrive = str(p.arrive_time or "").strip()
+        if len(arrive) >= 10 and arrive[4:5] == "-" and arrive[7:8] == "-":
+            return arrive[:10] == p.depart_date
+        return True
+
     def _push(self, route: Route, date: str, p: FlightPrice,
               last: Optional[float]) -> bool:
         diff_txt = ""
@@ -137,6 +149,10 @@ class Alerter:
             f"- **来源**：{p.platform}\n"
             f"- **抓取时间**：{p.fetched_at}\n"
         )
+        if p.airline or p.flight_no:
+            desp += f"- **航班**：{p.airline} {p.flight_no}\n"
+        if p.depart_time or p.arrive_time:
+            desp += f"- **时间**：{p.depart_time} - {p.arrive_time}\n"
         if last is not None:
             desp += f"- **上次推送价**：¥{last:.0f}\n"
         desp += f"\n[👉 在 {p.platform} 查看详情]({view_url})\n"

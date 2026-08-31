@@ -91,7 +91,19 @@ JIPIAO_CONFIG_B64=你的references/JiPiao-master/config.yaml经过base64后的�
 GitHub 仓库 -> Settings -> Secrets and variables -> Actions -> New repository secret
 ```
 
-工作流默认每天北京时间 08:10、14:10、20:10 运行，也可以在 GitHub 的 Actions 页面手动点 `Run workflow`。
+当前云端拆成两个工作流：
+
+- `Daily WeChat Push`：每天北京时间 10:00 推送普通天气和新闻简报。
+- `Flight Price Monitor`：约每 30 分钟监测一次机票。命中低价才通过 Server 酱推送。
+
+机票告警规则：
+
+- 当前关注 `2026-09-20` 到 `2026-09-30` 西宁飞深圳。
+- 价格低于 600 元才通知。
+- 出发和到达必须是同一天。
+- 同一天同一趟航班只通知一次，除非之后查到更低价格。
+
+GitHub Actions 页面手动点 `Run workflow` 会立即运行对应工作流；手动运行 `Daily WeChat Push` 会立刻发普通简报，手动运行 `Flight Price Monitor` 只有命中低价才发机票提醒。
 
 Windows PowerShell 生成 base64：
 

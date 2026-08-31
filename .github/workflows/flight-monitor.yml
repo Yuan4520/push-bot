@@ -1,0 +1,56 @@
+name: Flight Price Monitor
+
+on:
+  workflow_dispatch:
+  schedule:
+    # GitHub Actions cron uses UTC. Runs about every 30 minutes.
+    - cron: "*/30 * * * *"
+
+concurrency:
+  group: flight-price-monitor
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    env:
+      SERVERCHAN_SENDKEY: ${{ secrets.SERVERCHAN_SENDKEY }}
+      JIPIAO_CONFIG_B64: ${{ secrets.JIPIAO_CONFIG_B64 }}
+      PYTHONUTF8: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Restore flight state
+        uses: actions/cache@v4
+        with:
+          path: references/JiPiao-master/data
+          key: flight-state-${{ github.run_id }}
+          restore-keys: |
+            flight-state-
+
+      - name: Check required secrets
+        run: |
+          test -n "$SERVERCHAN_SENDKEY" || (echo "Missing SERVERCHAN_SENDKEY secret" && exit 1)
+          test -n "$JIPIAO_CONFIG_B64" || (echo "Missing JIPIAO_CONFIG_B64 secret" && exit 1)
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r references/JiPiao-master/requirements.txt
+
+      - name: Write private config
+        run: |
+          printf '%s' "$JIPIAO_CONFIG_B64" | base64 --decode > references/JiPiao-master/config.yaml
+
+      - name: Fetch prices and alert
+        working-directory: references/JiPiao-master
+        run: python main.py --once
