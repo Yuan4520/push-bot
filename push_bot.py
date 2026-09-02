@@ -359,8 +359,20 @@ def build_message(config):
 
 def send_serverchan(title, content, sendkey):
     url = f"https://sctapi.ftqq.com/{sendkey}.send"
-    response = requests.post(url, data={"title": title, "desp": content}, timeout=20)
-    response.raise_for_status()
+    response = requests.post(
+        url,
+        data={"title": title[:60], "desp": content[:32000]},
+        timeout=20,
+    )
+    try:
+        payload = response.json()
+    except ValueError:
+        payload = {}
+    if not response.ok:
+        detail = response.text[:500]
+        raise RuntimeError(f"Server酱 HTTP {response.status_code}: {detail}")
+    if payload and payload.get("code") not in (0, None):
+        raise RuntimeError(f"Server酱返回错误: {payload}")
     return response.text
 
 
@@ -386,10 +398,14 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", default="config.json")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--brief-only", action="store_true")
     args = parser.parse_args()
 
     load_dotenv()
     config = load_config(args.config)
+    if args.brief_only:
+        config["brief_only"] = True
+        config.setdefault("flights", {})["enabled"] = False
     title = config.get("title", "个人简报")
     content = build_message(config)
 
