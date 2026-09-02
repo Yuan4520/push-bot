@@ -41,4 +41,4 @@ jobs:
           printf '%s' "$BOT_CONFIG_B64" | base64 --decode > config.json
 
       - name: Send daily brief
-        run: python push_bot.py --config config.json
+        run: python push_bot.py --config config.json --brief-only
